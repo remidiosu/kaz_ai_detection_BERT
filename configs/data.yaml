@@ -1,0 +1,9 @@
+raw_dir: data/raw
+dataset: kz-transformers/multidomain-kazakh-dataset
+min_tokens: 150
+split:
+  train: 0.65
+  val:   0.15
+  test:  0.20
+seed: 42
+count: 5
