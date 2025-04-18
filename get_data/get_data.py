@@ -5,6 +5,11 @@ from utils import get_yaml_data
 
 from huggingface_hub import hf_hub_download
 import pandas as pd
+import os
+
+# disable symlinks because of dev setup
+# remove on cloud later
+os.environ["HF_HUB_DISABLE_SYMLINKS"] = "1"
 
 
 ## load data YAML
@@ -28,6 +33,7 @@ for dom in out_files:
 
     # 3. Filter & sample
     df = df[df.predicted_language == "kaz"]
+    df['text'] = (df['text'].str.split().str[:data['max_tokens']].str.join(' '))
     df = df[df.text.str.split().str.len() >= data['min_tokens']]
     df = df.sample(n=data['count'], random_state=42)
 

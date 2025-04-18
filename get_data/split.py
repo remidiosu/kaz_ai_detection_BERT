@@ -8,15 +8,19 @@ import os
 import pandas as pd
 
 # read downloaded data files into list of docs
-def read_interim() -> list:
+def read_interim():
     HERE = Path(__file__).resolve().parent
     ROOT = HERE.parent
     data = ROOT / 'data' / 'interim'
     
+    dfs = []
     for filename in os.listdir(data): 
         if filename.endswith('.csv'):
             df = pd.read_csv(filename)
-             
+            dfs.append(df) 
+
+    combined = pd.concat(dfs, axis=0, ignore_index=True)
+    return combined
 
 
 def split():
@@ -24,13 +28,17 @@ def split():
     data = get_yaml_data('data') 
 
     # read interim data
-    docs = read_interim()
-
+    df = read_interim()
+    X = df['text']
+    y = df['label']
 
     # split the data into: test / train
+    train_texts, train_labels, test_texs, test_labels = train_test_split(
+        X, y, test_size=data['test'], random_state=data['seed'] 
+    )
 
     # further split the train into: train / val
-
+    
     # create csv for: test, train, val 
     # cols: text,label
 
