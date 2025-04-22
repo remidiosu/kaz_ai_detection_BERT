@@ -6,5 +6,3 @@ prompts:
 
 styles: [""]
 
-max_tokens: 600
-truncate_input_tokens: 900
