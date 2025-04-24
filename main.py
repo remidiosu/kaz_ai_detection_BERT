@@ -1,14 +1,15 @@
 from get_data import generate_ai, get_data, split 
 
 def main():
-    # download data
-    print(get_data.start_download())
+    # 1. download data
+    # get_data.start_download()
 
-    # split the data
-    #print(split.split())
+    # 2. split the data
+    # Created → test: 400, train: 1360, val: 240
+    # print(split.split())
 
-    # generate AI paraphrases 
-    #print(generate_ai.generate_paraphrase())
+    # 3. generate AI paraphrases 
+    print(generate_ai.generate_paraphrases())
 
     # train the model
 

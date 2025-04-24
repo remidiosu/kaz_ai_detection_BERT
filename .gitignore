@@ -3,3 +3,4 @@ data/interim/
 outputs/
 helper.txt
 __pycache__/
+.env

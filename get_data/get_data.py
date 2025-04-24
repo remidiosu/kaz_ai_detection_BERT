@@ -1,47 +1,57 @@
-# download dataset from HuggingFace -> put into .../data/interim
-# run only once in the begginning 
-
+import pandas as pd
+from itertools import islice
+from datasets import load_dataset
 from get_data.utils import get_yaml_data
 
-from huggingface_hub import hf_hub_download
-import pandas as pd
-import os
-
-# disable symlinks because of dev setup
-# remove on cloud later
-# os.environ["HF_HUB_DISABLE_SYMLINKS"] = "1"
-
-
 def start_download():
-    ## load data YAML
+    # 1. Load YAML config
     data, root = get_yaml_data('data')
+    max_tokens   = data['max_tokens']
+    min_tokens   = data['min_tokens']
+    sample_count = data.get('count')
+
+    # 2. Dataset & output setup
+    dataset_name = "kz-transformers/multidomain-kazakh-dataset"
+    domains = ['cc100-monolingual-crawled-data', 'kazakhBooks', 'leipzig', 'oscar', 'kazakhNews']
+    cols = ["id", "text", "predicted_language", "contains_kaz_symbols"]
+
     OUT_DIR = root / "data" / "interim"
     OUT_DIR.mkdir(parents=True, exist_ok=True)
 
-    # the dataset is split across these categories, we will store them in separate json files
-    out_files = ['cc100-monolingual-crawled-data', 'kazakhBooks', 'leipzig', 'oscar', 'kazakhNews']
-    reports = []
-    for dom in out_files: 
-        # 1. Download the CSV once to disk via Git‑LFS
-        file_path = hf_hub_download(
-            repo_id="kz-transformers/multidomain-kazakh-dataset",
-            filename=f"{dom}.csv",
-            repo_type='dataset'
-        )
+    for domain in domains:
+        print(f"→ Processing {domain} …")
+        # 3. Stream the split for this domain
+        ds = load_dataset(dataset_name, 
+                          data_files=f"{domain}.csv", 
+                          split="train",
+                          delimiter=',',
+                          column_names=cols, 
+                          streaming=True)
 
-        # 2. Read with pandas (auto handles the header row)
-        df = pd.read_csv(file_path)
+        # 4. Filter for Kazakh and minimum length
+        ds = ds.filter(lambda x: x["predicted_language"] == "kaz")
+        ds = ds.filter(lambda x: len(x["text"].split()) >= min_tokens)
 
-        # 3. Filter & sample
-        df = df[df.predicted_language == "kaz"]
-        df['text'] = (df['text'].str.split().str[:data['max_tokens']].str.join(' '))
-        df = df[df.text.str.split().str.len() >= data['min_tokens']]
-        df = df.sample(n=data['count'], random_state=42)
+        # 5. Shuffle buffer so we can sample randomly
+        ds = ds.shuffle(buffer_size=10_000, seed=42)
 
-        # 4. Write out two‑column CSV
-        df[["text"]].assign(label=0).to_csv(f"{OUT_DIR}/{dom}.csv", index=False, encoding="utf-8")
-        reports.append(df.describe())
+        # 6. Take only `sample_count` examples
+        batch = list(islice(ds, sample_count))
 
-    return f"Downloaded dfs {reports}"
+        # 7. Trim each to max_tokens
+        processed = [
+            {"text": " ".join(item["text"].split()[:max_tokens])}
+            for item in batch
+        ]
 
+        # 8. Write out CSV with labels
+        df = pd.DataFrame(processed)
+        df["label"] = 0
+        out_path = OUT_DIR / f"{domain}.csv"
+        df.to_csv(out_path, index=False, encoding="utf-8")
+        print(f"   ✔ Saved {len(df)} rows to {out_path}")
 
+    print("Done!")
+
+if __name__ == "__main__":
+    start_download()
