@@ -1,19 +1,18 @@
 import os
-import time
 import random
 import logging
-from typing import List, Dict
-
 import pandas as pd
 import tiktoken
-from openai import OpenAI
 
+from openai import OpenAI
+from dotenv import load_dotenv
 from get_data.utils import get_yaml_data
 from get_data.chunking import paraphrase_long_text
 
 
 def generate_paraphrases() -> None:
     # Load config
+    load_dotenv()
     cfg, ROOT = get_yaml_data('generate')
     api_key = cfg.get('api_key') or os.getenv('OPENAI_API_KEY')
     client = OpenAI(api_key=api_key)

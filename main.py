@@ -1,4 +1,5 @@
 from get_data import generate_ai, get_data, split 
+from src.train import train_model
 
 def main():
     # 1. download data
@@ -13,9 +14,8 @@ def main():
 
     # train the model
 
-    # test the model on test dataset
+    # create graphs for the model and tests 
 
-    # log the prints on separate report file
 
 
 if __name__ == '__main__':
