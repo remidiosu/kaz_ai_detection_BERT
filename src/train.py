@@ -11,7 +11,7 @@ def train_model():
     cfg, root = get_yaml_data('train')
     batch = cfg.get('batch')
     grad_accum = cfg.get('gradient_accum')
-    lr = cfg.get('lr')
+    lr = float(cfg.get('lr'))
     epochs = cfg.get('epochs')
     seed = cfg.get('seed')
     pretrained = cfg.get('model_name')
@@ -55,7 +55,7 @@ def train_model():
         save_strategy='epoch', 
         seed=seed, 
         load_best_model_at_end=True, 
-        metric_for_best_model='accuracy',
+        metric_for_best_model='f1',
         warmup_ratio=0.1, 
         weight_decay=0.01
     )
@@ -68,14 +68,13 @@ def train_model():
         eval_dataset=val_ds, 
         data_collator=doc_collate_fn,
         compute_metrics=compute_metrics,
-        tokenizer=model.tokenizer
     )
 
     trainer.train()
     trainer.save_model(output_dir)
 
     test_rep = logs / f'test_{pretrained}.txt'
-    with open(test_rep, 'a') as log:
+    with open(test_rep, 'w') as log:
         test_metrics = trainer.predict(test_ds).metrics
         print("Test set metrics:", test_metrics)
         log.write(f"Test set metrics: {test_metrics}")

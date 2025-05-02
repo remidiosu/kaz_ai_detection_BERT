@@ -10,10 +10,10 @@ def main():
     # print(split.split())
 
     # 3. generate AI paraphrases 
-    print(generate_ai.generate_paraphrases())
+    # print(generate_ai.generate_paraphrases())
 
     # train the model
-
+    print(train_model())
     # create graphs for the model and tests 
 
 

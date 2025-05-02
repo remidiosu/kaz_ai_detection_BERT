@@ -5,13 +5,10 @@ df2 = pd.read_csv('data/corpus/train/train_human.csv')
 dfs = []
 parts = []
 for split in ['train', 'val', 'test']:
-    ps = pd.read_csv(f'data/corpus/{split}/{split}_ai_partial.csv')
+    df = pd.read_csv(f'data/corpus/{split}/{split}.csv')
+    print(df['label'].value_counts())
+    dfs.append(df)
 
-    parts.append(ps)
 
-    # print(ps['prompt'].value_counts())
 
-test = parts[-1]
-print(test)
-print(test['model'].value_counts())
 

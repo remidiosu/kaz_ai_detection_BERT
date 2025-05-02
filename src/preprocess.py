@@ -12,9 +12,9 @@ def prep_dataset(
     2. Clean 
     """
     files = {
-        'train': data_dir / 'train.csv', 
-        'val': data_dir / 'val.csv', 
-        'test': data_dir / 'test.csv'
+        'train': data_dir / 'train' / 'train.csv', 
+        'val': data_dir / 'val' / 'val.csv', 
+        'test': data_dir / 'test' / 'test.csv'
     }
     # check if files exist
     for split, path in files.items():

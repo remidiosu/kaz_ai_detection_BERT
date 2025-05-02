@@ -16,4 +16,11 @@ def clean_text(raw: str) -> str:
     txt = NOT_KAZAKH_RE.sub(" ", txt)
     # 2) collapse whitespace
     txt = re.sub(r"\s+", " ", txt)
+
+    # remove redundant repeating punctuation
+    txt = re.sub(r"\.{2,}", ".", txt)        # .... → .
+    txt = re.sub(r"\!{2,}", "!", txt)        # !!!! → !
+    txt = re.sub(r"\?{2,}", "?", txt)        # ???? → ?
+    txt = re.sub(r"[\*%/]+", " ", txt)       # Remove * % /
+
     return txt.strip()
