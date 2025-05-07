@@ -1,4 +1,5 @@
 from transformers import Trainer, TrainingArguments, set_seed
+import torch
 
 from src.model import DocumentBertClassifier
 from src.preprocess import prep_dataset
@@ -26,12 +27,11 @@ def train_model():
     set_seed(seed)
 
     # load data 
-    train, val, test = prep_dataset()
+    train, val, _ = prep_dataset()
 
     # create dataset objects
     train_ds = DocumentDataset(texts=train['text'].tolist(), labels=train['label'].tolist())
     val_ds = DocumentDataset(texts=val['text'].tolist(), labels=val['label'].tolist())
-    test_ds = DocumentDataset(texts=test['text'].tolist(), labels=test['label'].tolist())
 
     # instantiate the model
     model = DocumentBertClassifier(
@@ -40,6 +40,9 @@ def train_model():
         max_length=512, 
         overlap=50
     )
+
+    model = model.to("cuda" if torch.cuda.is_available() else "cpu")
+    model.bert.gradient_checkpointing_enable()
 
     # instantiate training arguments
     args = TrainingArguments(
@@ -57,7 +60,9 @@ def train_model():
         load_best_model_at_end=True, 
         metric_for_best_model='f1',
         warmup_ratio=0.1, 
-        weight_decay=0.01
+        weight_decay=0.01,
+        dataloader_num_workers=4,
+        fp16=True
     )
 
     # Trainer
@@ -73,11 +78,5 @@ def train_model():
     trainer.train()
     trainer.save_model(output_dir)
 
-    test_rep = logs / f'test_{pretrained}.txt'
-    with open(test_rep, 'w') as log:
-        test_metrics = trainer.predict(test_ds).metrics
-        print("Test set metrics:", test_metrics)
-        log.write(f"Test set metrics: {test_metrics}")
-
-    return trainer, test_metrics
+    return trainer
 

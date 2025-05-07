@@ -1,5 +1,4 @@
 .venv/
-outputs/
-helper.txt
 __pycache__/
 .env
+kaz-roberta-train/
