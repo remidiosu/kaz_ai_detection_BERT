@@ -2,3 +2,4 @@
 __pycache__/
 .env
 kaz-roberta-train/
+kaz-roberta-train-v2/

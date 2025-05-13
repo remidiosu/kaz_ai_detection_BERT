@@ -1,8 +1,9 @@
-batch: 4
-gradient_accum: 4         
-lr: 2e-5
-epochs: 4
+batch: 16
+gradient_accum: 1         
+lr: 3e-5
+epochs: 5
+warmup: 0.2
 seed: 42
 model_name: kz-transformers/kaz-roberta-conversational
-output_dir: kaz-roberta-train
+output_dir: kaz-roberta-train-v2
 

@@ -1,4 +1,4 @@
-from transformers import Trainer, TrainingArguments, set_seed
+from transformers import Trainer, TrainingArguments, set_seed, AutoTokenizer 
 import torch
 
 from src.model import DocumentBertClassifier
@@ -15,11 +15,16 @@ def train_model():
     lr = float(cfg.get('lr'))
     epochs = cfg.get('epochs')
     seed = cfg.get('seed')
+    warmup = cfg.get('warmup', 0.1)
     pretrained = cfg.get('model_name')
     output_dir = cfg.get('output_dir')
     output_dir = root / output_dir
     logs = output_dir / 'reports'
+    tokenizer = AutoTokenizer.from_pretrained(pretrained)
 
+    if tokenizer.pad_token is None:
+        tokenizer.add_special_tokens({'pad_token':'[PAD]'})
+        
     # mae sure dirs exist
     output_dir.mkdir(exist_ok=True, parents=True)
     logs.mkdir(exist_ok=True, parents=True)
@@ -30,15 +35,13 @@ def train_model():
     train, val, _ = prep_dataset()
 
     # create dataset objects
-    train_ds = DocumentDataset(texts=train['text'].tolist(), labels=train['label'].tolist())
-    val_ds = DocumentDataset(texts=val['text'].tolist(), labels=val['label'].tolist())
+    train_ds = DocumentDataset(texts=train['text'].tolist(), labels=train['label'].tolist(), tokenizer=tokenizer)
+    val_ds = DocumentDataset(texts=val['text'].tolist(), labels=val['label'].tolist(), tokenizer=tokenizer)
 
     # instantiate the model
     model = DocumentBertClassifier(
         pretrained_name=pretrained, 
-        num_labels=2, 
-        max_length=512, 
-        overlap=50
+        num_labels=2
     )
 
     model = model.to("cuda" if torch.cuda.is_available() else "cpu")
@@ -58,8 +61,8 @@ def train_model():
         save_strategy='epoch', 
         seed=seed, 
         load_best_model_at_end=True, 
-        metric_for_best_model='f1',
-        warmup_ratio=0.1, 
+        metric_for_best_model='precision',
+        warmup_ratio=warmup, 
         weight_decay=0.01,
         dataloader_num_workers=4,
         fp16=True
