@@ -4,7 +4,7 @@ import torch
 class DocumentDataset(Dataset):
     def __init__(self, texts, labels, tokenizer, max_length=512, overlap=50):
         self.texts = texts  
-        self.labels = labels
+        self.original_labels = labels
         self.tokenizer = tokenizer
         self.max_length = max_length
         self.overlap = overlap
@@ -18,6 +18,7 @@ class DocumentDataset(Dataset):
             self.all_chunks.extend(chunks)
             self.all_masks.extend(masks)
             self.doc_indices.extend([doc_idx] * len(chunks))  
+
 
     def __len__(self):
         return len(self.all_chunks)  
@@ -63,20 +64,20 @@ class DocumentDataset(Dataset):
     def __getitem__(self, index):
         return {
             "input_ids": self.all_chunks[index],
-            "attention_mask": self.all_masks[index],  # New
-            "labels": self.labels[self.doc_indices[index]],
-            "doc_indices": self.doc_indices[index]
+            "attention_mask": self.all_masks[index], 
+            "doc_indices": self.doc_indices[index],
+            "labels": self.original_labels[self.doc_indices[index]] 
         }
 
 def doc_collate_fn(batch):
     input_ids = [item["input_ids"] for item in batch]
-    attention_masks = [item["attention_mask"] for item in batch]  # New
-    labels = [item["labels"] for item in batch]
+    attention_masks = [item["attention_mask"] for item in batch]
     doc_indices = [item["doc_indices"] for item in batch]
+    labels = [item["labels"] for item in batch]
     
     return {
         "input_ids": torch.tensor(input_ids, dtype=torch.long),
-        "attention_mask": torch.tensor(attention_masks, dtype=torch.long),  # New
-        "labels": torch.tensor(labels, dtype=torch.long),
-        "doc_indices": torch.tensor(doc_indices, dtype=torch.long)
+        "attention_mask": torch.tensor(attention_masks, dtype=torch.long),
+        "doc_indices": torch.tensor(doc_indices, dtype=torch.long),
+        "labels": torch.tensor(labels, dtype=torch.long)  # Include labels
     }
