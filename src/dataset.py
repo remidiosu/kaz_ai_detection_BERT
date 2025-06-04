@@ -1,83 +1,46 @@
 from torch.utils.data import Dataset
+from transformers import AutoTokenizer
+from get_data.utils import get_yaml_data
 import torch
 
+
 class DocumentDataset(Dataset):
-    def __init__(self, texts, labels, tokenizer, max_length=512, overlap=50):
-        self.texts = texts  
-        self.original_labels = labels
-        self.tokenizer = tokenizer
-        self.max_length = max_length
-        self.overlap = overlap
-        self.all_chunks = []
-        self.doc_indices = []
-        self.all_masks = []
-        
-        for doc_idx, (text, label) in enumerate(zip(texts, labels)):
-            tokens = tokenizer(text, add_special_tokens=False)["input_ids"]
-            chunks, masks = self._split_into_chunks(tokens)
-            self.all_chunks.extend(chunks)
-            self.all_masks.extend(masks)
-            self.doc_indices.extend([doc_idx] * len(chunks))  
-
-
+    """Each sample is one document"""
+    def __init__(self, texts, labels):
+        self.texts = texts
+        self.labels = labels
+    
     def __len__(self):
-        return len(self.all_chunks)  
+        return len(self.texts)
     
-    def _preprocess(self, texts, labels):
-        data = []
-        for text, label in zip(texts, labels):
-            tokens = self.tokenizer(text, add_special_tokens=False)['input_ids']
-            chunks = self._split_into_chunks(tokens)
-            data.append({'chunks':chunks, 'label':label})
-        return data
-    
-    def _split_into_chunks(self, tokens):
-        chunks = []
-        attention_masks = []
-        start = 0 
-        body_max = self.max_length - 2  # Reserve space for [CLS] and [SEP]
-        
-        while start < len(tokens):
-            end = start + body_max
-            chunk = tokens[start:end]
-            
-            # Add special tokens
-            chunk = self.tokenizer.build_inputs_with_special_tokens(chunk)
-            
-            # Create attention mask before padding
-            real_tokens = len(chunk)
-            attention_mask = [1] * real_tokens
-            
-            # Pad to max_length
-            padding = [self.tokenizer.pad_token_id] * (self.max_length - real_tokens)
-            chunk += padding
-            
-            # Extend attention mask for padding
-            attention_mask += [0] * (self.max_length - real_tokens)
-            
-            chunks.append(chunk)
-            attention_masks.append(attention_mask)
-            start = end - self.overlap if (end - self.overlap) > start else end
-        
-        return chunks, attention_masks
-
     def __getitem__(self, index):
-        return {
-            "input_ids": self.all_chunks[index],
-            "attention_mask": self.all_masks[index], 
-            "doc_indices": self.doc_indices[index],
-            "labels": self.original_labels[self.doc_indices[index]] 
-        }
+        return self.texts[index], self.labels[index]
+    
 
 def doc_collate_fn(batch):
-    input_ids = [item["input_ids"] for item in batch]
-    attention_masks = [item["attention_mask"] for item in batch]
-    doc_indices = [item["doc_indices"] for item in batch]
-    labels = [item["labels"] for item in batch]
-    
+    cfg, root = get_yaml_data('train')
+    pretrained = cfg.get('model_name')
+    texts, labels = zip(*batch)
+    labels = torch.tensor(labels, dtype=torch.long)
+    tokenizer = AutoTokenizer.from_pretrained(pretrained)
+
+    input_ids_list = []
+    attention_mask_list = []
+
+    for doc in texts:
+        enc = tokenizer(
+            doc,
+            add_special_tokens=False, 
+            return_attention_mask=True,
+            return_tensors="pt"
+        )
+        # enc["input_ids"].shape == (1, n_tokens)
+        # we want the 1D tensor (n_tokens,)
+        input_ids_list.append(enc["input_ids"].squeeze(0))
+        attention_mask_list.append(enc["attention_mask"].squeeze(0))
+
     return {
-        "input_ids": torch.tensor(input_ids, dtype=torch.long),
-        "attention_mask": torch.tensor(attention_masks, dtype=torch.long),
-        "doc_indices": torch.tensor(doc_indices, dtype=torch.long),
-        "labels": torch.tensor(labels, dtype=torch.long)  # Include labels
+        "input_ids": input_ids_list,           # list of 1D LongTensors
+        "attention_mask": attention_mask_list, # list of 1D LongTensors
+        "labels": labels                       # (batch_size,)
     }
